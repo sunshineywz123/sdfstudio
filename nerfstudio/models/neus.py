@@ -31,7 +31,7 @@ from nerfstudio.field_components.field_heads import FieldHeadNames
 from nerfstudio.model_components.ray_samplers import NeuSSampler
 from nerfstudio.models.base_surface_model import SurfaceModel, SurfaceModelConfig
 
-
+import gc
 @dataclass
 class NeuSModelConfig(SurfaceModelConfig):
     """NeuS Model Config"""
@@ -96,10 +96,13 @@ class NeuSModel(SurfaceModel):
     def sample_and_forward_field(self, ray_bundle: RayBundle) -> Dict:
         ray_samples = self.sampler(ray_bundle, sdf_fn=self.field.get_sdf)
         # save_points("a.ply", ray_samples.frustums.get_start_positions().reshape(-1, 3).detach().cpu().numpy())
+        gc.collect()
         field_outputs = self.field(ray_samples, return_alphas=True)
+        gc.collect()
         weights, transmittance = ray_samples.get_weights_and_transmittance_from_alphas(
             field_outputs[FieldHeadNames.ALPHA]
         )
+        gc.collect()
         bg_transmittance = transmittance[:, -1, :]
 
         samples_and_field_outputs = {

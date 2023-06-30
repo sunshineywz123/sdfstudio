@@ -26,7 +26,7 @@ from nerfstudio.field_components.field_heads import FieldHeadNames
 from nerfstudio.model_components.ray_samplers import ErrorBoundedSampler
 from nerfstudio.models.base_surface_model import SurfaceModel, SurfaceModelConfig
 
-
+import gc
 @dataclass
 class VolSDFModelConfig(SurfaceModelConfig):
     """VolSDF Model Config"""
@@ -60,13 +60,17 @@ class VolSDFModel(SurfaceModel):
         )
 
     def sample_and_forward_field(self, ray_bundle: RayBundle) -> Dict:
+        gc.collect()
         ray_samples, eik_points = self.sampler(
             ray_bundle, density_fn=self.field.laplace_density, sdf_fn=self.field.get_sdf
         )
+        gc.collect()
         field_outputs = self.field(ray_samples)
+        gc.collect()
         weights, transmittance = ray_samples.get_weights_and_transmittance(field_outputs[FieldHeadNames.DENSITY])
         bg_transmittance = transmittance[:, -1, :]
-
+        gc.collect()
+        
         samples_and_field_outputs = {
             "ray_samples": ray_samples,
             "eik_points": eik_points,

@@ -45,6 +45,7 @@ except ImportError:
     # tinycudann module doesn't exist
     pass
 
+import gc
 
 class LaplaceDensity(nn.Module):  # alpha * Laplace(loc=0, scale=beta).cdf(-sdf)
     """Laplace density from VolSDF"""
@@ -582,11 +583,12 @@ class SDFField(Field):
             h.append(n_dot_v)
 
         h = torch.cat(h, dim=-1)
-
+        torch.cuda.empty_cache()
         for l in range(0, self.num_layers_color - 1):
             lin = getattr(self, "clin" + str(l))
-
+            gc.collect()
             h = lin(h)
+            gc.collect()
 
             if l < self.num_layers_color - 2:
                 h = self.relu(h)
@@ -615,7 +617,7 @@ class SDFField(Field):
         """compute output of ray samples"""
         if ray_samples.camera_indices is None:
             raise AttributeError("Camera indices are not provided.")
-
+        gc.collect()
         outputs = {}
 
         camera_indices = ray_samples.camera_indices.squeeze()
@@ -625,16 +627,18 @@ class SDFField(Field):
 
         directions = ray_samples.frustums.directions
         directions_flat = directions.reshape(-1, 3)
-
+        gc.collect()
         if self.spatial_distortion is not None:
             inputs = self.spatial_distortion(inputs)
+        gc.collect()    
         points_norm = inputs.norm(dim=-1)
         # compute gradient in constracted space
         inputs.requires_grad_(True)
+        gc.collect()
         with torch.enable_grad():
             h = self.forward_geonetwork(inputs)
             sdf, geo_feature = torch.split(h, [1, self.config.geo_feat_dim], dim=-1)
-
+        gc.collect()
         if self.config.use_numerical_gradients:
             gradients, sampled_sdf = self.gradient(
                 inputs,
@@ -653,18 +657,18 @@ class SDFField(Field):
                 only_inputs=True,
             )[0]
             sampled_sdf = None
-
+        gc.collect()
         rgb = self.get_colors(inputs, directions_flat, gradients, geo_feature, camera_indices)
-
+        gc.collect()
         density = self.laplace_density(sdf)
-
+        gc.collect()
         rgb = rgb.view(*ray_samples.frustums.directions.shape[:-1], -1)
         sdf = sdf.view(*ray_samples.frustums.directions.shape[:-1], -1)
         density = density.view(*ray_samples.frustums.directions.shape[:-1], -1)
         gradients = gradients.view(*ray_samples.frustums.directions.shape[:-1], -1)
         normals = F.normalize(gradients, p=2, dim=-1)
         points_norm = points_norm.view(*ray_samples.frustums.directions.shape[:-1], -1)
-        
+        gc.collect()
         outputs.update(
             {
                 FieldHeadNames.RGB: rgb,
@@ -681,11 +685,11 @@ class SDFField(Field):
             # TODO use mid point sdf for NeuS
             alphas = self.get_alpha(ray_samples, sdf, gradients)
             outputs.update({FieldHeadNames.ALPHA: alphas})
-
+        gc.collect()
         if return_occupancy:
             occupancy = self.get_occupancy(sdf)
             outputs.update({FieldHeadNames.OCCUPANCY: occupancy})
-
+        gc.collect()
         return outputs
 
     def forward(self, ray_samples: RaySamples, return_alphas=False, return_occupancy=False):
@@ -694,5 +698,7 @@ class SDFField(Field):
         Args:
             ray_samples: Samples to evaluate field on.
         """
+        gc.collect()
         field_outputs = self.get_outputs(ray_samples, return_alphas=return_alphas, return_occupancy=return_occupancy)
+        gc.collect()
         return field_outputs
