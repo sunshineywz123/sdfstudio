@@ -49,7 +49,7 @@ from nerfstudio.engine.callbacks import TrainingCallback, TrainingCallbackAttrib
 from nerfstudio.models.base_model import Model, ModelConfig
 from nerfstudio.utils import profiler
 from nerfstudio.utils.images import BasicImages
-
+import gc
 
 def module_wrapper(ddp_or_model: Union[DDP, Model]) -> Model:
     """
@@ -307,14 +307,19 @@ class VanillaPipeline(Pipeline):
         """
         self.eval()
         torch.cuda.empty_cache()
+        gc.collect()
         image_idx, camera_ray_bundle, batch = self.datamanager.next_eval_image(step)
+        gc.collect()
         outputs = self.model.get_outputs_for_camera_ray_bundle(camera_ray_bundle)
+        gc.collect()
         metrics_dict, images_dict = self.model.get_image_metrics_and_images(outputs, batch)
         assert "image_idx" not in metrics_dict
         metrics_dict["image_idx"] = image_idx
         assert "num_rays" not in metrics_dict
         metrics_dict["num_rays"] = len(camera_ray_bundle)
+        gc.collect()
         self.train()
+        gc.collect()
         return metrics_dict, images_dict
 
     @profiler.time_function

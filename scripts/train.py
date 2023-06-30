@@ -87,7 +87,15 @@ def train_loop(local_rank: int, world_size: int, config: cfg.Config, global_rank
     torch.cuda.set_device(local_rank)
     trainer = Trainer(config, local_rank, world_size)
     trainer.setup()
-    trainer.train()
+    import ipdb
+    import sys
+    try:
+        trainer.train()
+    except:
+       type, value, traceback = sys.exc_info()
+       ipdb.post_mortem(traceback)
+
+   #trainer.train()
 
 
 def _distributed_worker(
