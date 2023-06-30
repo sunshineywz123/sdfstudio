@@ -34,7 +34,7 @@ from nerfstudio.data.scene_box import SceneBox
 from nerfstudio.engine.callbacks import TrainingCallback, TrainingCallbackAttributes
 from nerfstudio.model_components.scene_colliders import NearFarCollider
 
-
+import gc
 # Model related configs
 @dataclass
 class ModelConfig(InstantiateConfig):
@@ -139,6 +139,7 @@ class Model(nn.Module):
         if self.collider is not None:
             ray_bundle = self.collider(ray_bundle)
 
+        gc.collect()
         return self.get_outputs(ray_bundle)
 
     def get_metrics_dict(self, outputs, batch) -> Dict[str, torch.Tensor]:
@@ -173,6 +174,7 @@ class Model(nn.Module):
         image_height, image_width = camera_ray_bundle.origins.shape[:2]
         num_rays = len(camera_ray_bundle)
         outputs_lists = defaultdict(list)
+        gc.collect()
         for i in range(0, num_rays, num_rays_per_chunk):
             start_idx = i
             end_idx = i + num_rays_per_chunk
@@ -181,11 +183,14 @@ class Model(nn.Module):
             for output_name, output in outputs.items():  # type: ignore
                 outputs_lists[output_name].append(output)
         outputs = {}
+        gc.collect()
         for output_name, outputs_list in outputs_lists.items():
+            gc.collect()
             if not torch.is_tensor(outputs_list[0]):
                 # TODO: handle lists of tensors as well
                 continue
             outputs[output_name] = torch.cat(outputs_list).view(image_height, image_width, -1)  # type: ignore
+        gc.collect()
         return outputs
 
     @abstractmethod

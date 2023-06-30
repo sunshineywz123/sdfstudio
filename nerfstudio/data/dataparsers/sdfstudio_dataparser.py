@@ -343,6 +343,7 @@ class SDFStudio(DataParser):
                 "func": get_sparse_sfm_points,
                 "kwargs": {"sfm_points": sfm_points},
             }
+        #import ipdb;ipdb.set_trace()
         # load pair information
         pairs_path = self.config.data / "pairs.txt"
         if pairs_path.exists() and split == "train" and self.config.load_pairs:

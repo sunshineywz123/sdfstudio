@@ -150,7 +150,7 @@ class TrainerConfig(PrintableConfig):
     """Whether or not to use mixed precision for training."""
     relative_model_dir: Path = Path("sdfstudio_models/")
     """Relative path to save all checkpoints."""
-    save_only_latest_checkpoint: bool = True
+    save_only_latest_checkpoint: bool = False
     """Whether to only save the latest checkpoint or all checkpoints."""
     # optional parameters if we want to resume training
     load_dir: Optional[Path] = None

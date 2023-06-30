@@ -68,7 +68,7 @@ class ExtractMesh:
         _, pipeline, _ = eval_setup(self.load_config)
 
         CONSOLE.print("Extract mesh with marching cubes and may take a while")
-
+        #import ipdb;ipdb.set_trace()
         if self.create_visibility_mask:
             assert self.resolution % 512 == 0
 
@@ -104,6 +104,16 @@ class ExtractMesh:
                 simplify_mesh=self.simplify_mesh,
                 inv_contraction=inv_contract,
             )
+            import ipdb;ipdb.set_trace()
+            
+            texture_utils.export_textured_mesh(
+                mesh,
+                pipeline,
+                self.output_dir,
+                px_per_uv_triangle=self.px_per_uv_triangle if self.unwrap_method == "custom" else None,
+                unwrap_method=self.unwrap_method,
+                num_pixels_per_side=self.num_pixels_per_side,
+            )
             return
 
         if self.is_occupancy:
@@ -131,7 +141,20 @@ class ExtractMesh:
                 output_path=self.output_path,
                 simplify_mesh=self.simplify_mesh,
             )
-
+            if 0:
+                from nerfstudio.exporter.exporter_utils import (generate_point_cloud,get_mesh_from_filename)
+                from nerfstudio.exporter import texture_utils, tsdf_utils
+                mesh = get_mesh_from_filename(
+				str(self.output_path)
+	        )
+                CONSOLE.print("Texturing mesh with NeRF")
+                import ipdb;ipdb.set_trace()
+                texture_utils.export_textured_mesh(
+				mesh,
+				pipeline,
+				self.output_path,
+				num_pixels_per_side=2048
+     	        )
 
 def entrypoint():
     """Entrypoint for use with pyproject scripts."""

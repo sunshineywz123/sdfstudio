@@ -173,7 +173,9 @@ class Trainer:
 
                 self.eval_iteration(step)
 
+                #import ipdb;ipdb.set_trace()
                 if step_check(step, self.config.trainer.steps_per_save):
+                    #import ipdb;ipdb.set_trace()
                     self.save_checkpoint(step)
 
                 writer.write_out_storage()

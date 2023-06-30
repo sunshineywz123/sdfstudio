@@ -95,6 +95,8 @@ def train_loop(local_rank: int, world_size: int, config: cfg.Config, global_rank
        type, value, traceback = sys.exc_info()
        ipdb.post_mortem(traceback)
 
+   #trainer.train()
+
 
 def _distributed_worker(
     local_rank: int,
