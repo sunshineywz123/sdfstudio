@@ -573,7 +573,27 @@ def run_colmap(
         ]
         run_command(" ".join(bundle_adjuster_cmd), verbose=verbose)
     CONSOLE.log("[bold green]:tada: Done refining intrinsics.")
-
+def calculate_rotation_angle(R1, R2):
+            # 计算旋转矩阵的转置
+    R1_t = np.transpose(R1)
+    R2_t = np.transpose(R2)
+    
+    # 计算旋转矩阵的迹
+    trace_R = np.trace(np.dot(R1_t, R2))
+    
+    # 计算夹角的余弦值
+    cos_angle = (trace_R - 1) / 2
+    
+    # 将余弦值限制在[-1, 1]之间，避免由于浮点数计算误差引起的错误
+    cos_angle = np.clip(cos_angle, -1, 1)
+    
+    # 计算夹角的弧度值
+    angle_rad = np.arccos(cos_angle)
+    
+    # 将弧度值转换为角度值
+    angle_deg = np.degrees(angle_rad)
+    
+    return angle_deg
 
 def colmap_to_json(cameras_path: Path, images_path: Path, output_dir: Path, camera_model: CameraModel) -> int:
     """Converts COLMAP's cameras.bin and images.bin to a JSON file.
@@ -592,12 +612,33 @@ def colmap_to_json(cameras_path: Path, images_path: Path, output_dir: Path, came
     images = read_images_binary(images_path)
 
     # Only supports one camera
-    camera_params = cameras[1].params
+    for k,v in cameras.items():
+        camera_params = cameras[k].params
+        break
 
     frames = []
+    rotations = []
     for _, im_data in images.items():
         rotation = qvec2rotmat(im_data.qvec)
         translation = im_data.tvec.reshape(3, 1)
+        
+        # 判断夹角是否小于3°
+        
+        # if len(rotations) >0 :
+        #     angle_deg = 0
+        #     for r in rotations:
+        #         # import ipdb;ipdb.set_trace()
+        #         angle_deg = calculate_rotation_angle(r, rotation)
+        #         print(angle_deg)
+        #         if angle_deg < 30:
+        #             print("夹角小于30°")
+        #             break
+        #         else:
+        #             print("夹角大于等于30°")
+        #     if angle_deg < 30:
+        #         print("夹角小于30°")
+        #         continue
+        rotations.append(rotation)
         w2c = np.concatenate([rotation, translation], 1)
         w2c = np.concatenate([w2c, np.array([[0, 0, 0, 1]])], 0)
         c2w = np.linalg.inv(w2c)
@@ -606,6 +647,8 @@ def colmap_to_json(cameras_path: Path, images_path: Path, output_dir: Path, came
         c2w = c2w[np.array([1, 0, 2, 3]), :]
         c2w[2, :] *= -1
 
+        # print('im_data.name:')
+        # print(im_data.name)
         name = Path(f"./images/{im_data.name}")
 
         frame = {
@@ -613,17 +656,19 @@ def colmap_to_json(cameras_path: Path, images_path: Path, output_dir: Path, came
             "transform_matrix": c2w.tolist(),
         }
         frames.append(frame)
-
+    # idxs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 17, 19, 22, 23, 25, 30, 32, 33, 34, 38, 40, 41, 45, 46, 48, 51, 53, 54, 55, 59, 64, 66, 70, 75, 84, 86, 87, 91, 98, 104, 109, 122, 136, 139, 140, 144, 145, 150, 163, 166, 172, 173, 176, 179, 195, 210, 212, 216, 222, 223, 228, 229, 234, 237, 240, 243, 245, 251, 253, 266, 267, 268, 274, 276, 277, 278, 281, 289, 293, 295, 299, 302, 316, 321, 324, 335, 342, 349, 354, 362, 369, 385, 398, 443]
+    # frames = [frames[idx] for idx in idxs]
+    # import ipdb;ipdb.set_trace()
     out = {
         "fl_x": float(camera_params[0]),
         "fl_y": float(camera_params[1]),
         "cx": float(camera_params[2]),
         "cy": float(camera_params[3]),
-        "w": cameras[1].width,
-        "h": cameras[1].height,
+        "w": cameras[k].width,
+        "h": cameras[k].height,
         "camera_model": camera_model.value,
     }
-
+    # import ipdb;ipdb.set_trace()
     if camera_model == CameraModel.OPENCV:
         out.update(
             {

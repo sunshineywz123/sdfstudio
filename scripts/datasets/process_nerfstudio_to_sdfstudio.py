@@ -271,5 +271,10 @@ if __name__ == "__main__":
                         help="path to pretrained models")
 
     args = parser.parse_args()
-
-    main(args)
+    import ipdb
+    import sys
+    try:
+        main(args)
+    except:
+       type, value, traceback = sys.exc_info()
+       ipdb.post_mortem(traceback)

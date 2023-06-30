@@ -92,11 +92,12 @@ class ProcessImages:
         summary_log = []
 
         # Copy images to output directory
-        num_frames = process_data_utils.copy_images(self.data, image_dir=image_dir, verbose=self.verbose)
-        summary_log.append(f"Starting with {num_frames} images")
+        # num_frames = process_data_utils.copy_images(self.data, image_dir=image_dir, verbose=self.verbose)
+        # summary_log.append(f"Starting with {num_frames} images")
 
         # Downscale images
-        summary_log.append(process_data_utils.downscale_images(image_dir, self.num_downscales, verbose=self.verbose))
+        # ywz
+        # summary_log.append(process_data_utils.downscale_images(image_dir, self.num_downscales, verbose=self.verbose))
 
         # Run COLMAP
         colmap_dir = self.output_dir / "colmap"
@@ -141,7 +142,7 @@ class ProcessImages:
                     camera_model=CAMERA_MODELS[self.camera_type],
                 )
                 summary_log.append(f"Colmap matched {num_matched_frames} images")
-            summary_log.append(colmap_utils.get_matching_summary(num_frames, num_matched_frames))
+            # summary_log.append(colmap_utils.get_matching_summary(num_frames, num_matched_frames))
         else:
             CONSOLE.log("[bold yellow]Warning: could not find existing COLMAP results. Not generating transforms.json")
 
@@ -721,10 +722,14 @@ Commands = Union[
 
 
 def entrypoint():
-    """Entrypoint for use with pyproject scripts."""
-    tyro.extras.set_accent_color("bright_yellow")
-    tyro.cli(Commands).main()
-
+    import ipdb
+    try:
+        """Entrypoint for use with pyproject scripts."""
+        tyro.extras.set_accent_color("bright_yellow")
+        tyro.cli(Commands).main()
+    except:
+       type, value, traceback = sys.exc_info()
+       ipdb.post_mortem(traceback)
 
 if __name__ == "__main__":
     entrypoint()

@@ -31,13 +31,14 @@ CONSOLE = Console(width=120)
 
 class CameraModel(Enum):
     """Enum for camera types."""
-
+    PINHOLE = "PINHOLE"
     OPENCV = "OPENCV"
     OPENCV_FISHEYE = "OPENCV_FISHEYE"
 
 
 CAMERA_MODELS = {
-    "perspective": CameraModel.OPENCV,
+    # "perspective": CameraModel.OPENCV,
+    "perspective": CameraModel.PINHOLE,
     "fisheye": CameraModel.OPENCV_FISHEYE,
 }
 
@@ -127,7 +128,7 @@ def copy_images_list(
         image_dir.mkdir(exist_ok=True, parents=True)
 
     copied_image_paths = []
-
+    # import ipdb;ipdb.set_trace()
     # Images should be 1-indexed for the rest of the pipeline.
     for idx, image_path in enumerate(image_paths):
         if verbose:
