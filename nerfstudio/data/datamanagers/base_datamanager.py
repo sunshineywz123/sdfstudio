@@ -64,6 +64,8 @@ from nerfstudio.model_components.ray_generators import RayGenerator
 from nerfstudio.utils.images import BasicImages
 from nerfstudio.utils.misc import IterableWrapper
 
+import gc
+
 CONSOLE = Console(width=120)
 
 AnnotatedDataParserUnion = tyro.conf.OmitSubcommandPrefixes[  # Omit prefixes of flags in subcommands.
@@ -441,8 +443,11 @@ class VanillaDataManager(DataManager):  # pylint: disable=abstract-method
         for camera_ray_bundle, batch in self.eval_dataloader:
             assert camera_ray_bundle.camera_indices is not None
             if isinstance(batch["image"], BasicImages):  # If this is a generalized dataset, we need to get image tensor
+                gc.collect()
                 batch["image"] = batch["image"].images[0]
+                gc.collect()
                 camera_ray_bundle = camera_ray_bundle.reshape((*batch["image"].shape[:-1], 1))
+                gc.collect()
             image_idx = int(camera_ray_bundle.camera_indices[0, 0, 0])
             return image_idx, camera_ray_bundle, batch
         raise ValueError("No more eval images")

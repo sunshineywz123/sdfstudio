@@ -34,6 +34,7 @@ from nerfstudio.data.datasets.base_dataset import InputDataset
 from nerfstudio.data.utils.nerfstudio_collate import nerfstudio_collate
 from nerfstudio.utils.misc import get_dict_to_torch
 
+import gc
 CONSOLE = Console(width=120)
 
 
@@ -183,9 +184,14 @@ class EvalDataloader(DataLoader):
         Args:
             image_idx: Camera image index
         """
+
+        gc.collect()
         ray_bundle = self.cameras.generate_rays(camera_indices=image_idx, keep_shape=True)
+        gc.collect()
         batch = self.input_dataset[image_idx]
+        gc.collect()
         batch = get_dict_to_torch(batch, device=self.device, exclude=["image"])
+        gc.collect()
         return ray_bundle, batch
 
 
@@ -250,7 +256,9 @@ class RandIndicesEvalDataloader(EvalDataloader):
         if self.count < 1:
             image_indices = range(self.cameras.size)
             image_idx = random.choice(image_indices)
+            gc.collect()
             ray_bundle, batch = self.get_data_from_image_idx(image_idx)
+            gc.collect()
             self.count += 1
             return ray_bundle, batch
         raise StopIteration
