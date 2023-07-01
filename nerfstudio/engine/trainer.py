@@ -45,7 +45,7 @@ from nerfstudio.utils.decorators import (
 from nerfstudio.utils.misc import step_check
 from nerfstudio.utils.writer import EventName, TimeWriter
 from nerfstudio.viewer.server import viewer_utils
-
+import gc
 CONSOLE = Console(width=120)
 
 
@@ -138,9 +138,11 @@ class Trainer:
             step = 0
             for step in range(self._start_step, self._start_step + num_iterations):
                 with TimeWriter(writer, EventName.ITER_TRAIN_TIME, step=step) as train_t:
-
+                    gc.collect()
+                    torch.cuda.empty_cache()  # 释放显存
                     self.pipeline.train()
-
+                    gc.collect()
+                    torch.cuda.empty_cache()  # 释放显存
                     # training callbacks before the training iteration
                     for callback in self.callbacks:
                         callback.run_callback_at_location(
@@ -149,7 +151,8 @@ class Trainer:
 
                     # time the forward pass
                     loss, loss_dict, metrics_dict = self.train_iteration(step)
-
+                    gc.collect()
+                    torch.cuda.empty_cache()  # 释放显存
                     # training callbacks after the training iteration
                     for callback in self.callbacks:
                         callback.run_callback_at_location(step, location=TrainingCallbackLocation.AFTER_TRAIN_ITERATION)
