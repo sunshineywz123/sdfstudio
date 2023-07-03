@@ -290,11 +290,10 @@ class VanillaPipeline(Pipeline):
             step: current iteration step
         """
         self.eval()
-        with torch.no_grad():
-            ray_bundle, batch = self.datamanager.next_eval(step)
-            model_outputs = self.model(ray_bundle)
-            metrics_dict = self.model.get_metrics_dict(model_outputs, batch)
-            loss_dict = self.model.get_loss_dict(model_outputs, batch, metrics_dict)
+        ray_bundle, batch = self.datamanager.next_eval(step)
+        model_outputs = self.model(ray_bundle)
+        metrics_dict = self.model.get_metrics_dict(model_outputs, batch)
+        loss_dict = self.model.get_loss_dict(model_outputs, batch, metrics_dict)
         self.train()
         return model_outputs, loss_dict, metrics_dict
 
@@ -307,19 +306,18 @@ class VanillaPipeline(Pipeline):
             step: current iteration step
         """
         self.eval()
-        with torch.no_grad():
-            torch.cuda.empty_cache()
-            gc.collect()
-            image_idx, camera_ray_bundle, batch = self.datamanager.next_eval_image(step)
-            gc.collect()
-            outputs = self.model.get_outputs_for_camera_ray_bundle(camera_ray_bundle)
-            gc.collect()
-            metrics_dict, images_dict = self.model.get_image_metrics_and_images(outputs, batch)
-            assert "image_idx" not in metrics_dict
-            metrics_dict["image_idx"] = image_idx
-            assert "num_rays" not in metrics_dict
-            metrics_dict["num_rays"] = len(camera_ray_bundle)
-            gc.collect()
+        torch.cuda.empty_cache()
+        gc.collect()
+        image_idx, camera_ray_bundle, batch = self.datamanager.next_eval_image(step)
+        gc.collect()
+        outputs = self.model.get_outputs_for_camera_ray_bundle(camera_ray_bundle)
+        gc.collect()
+        metrics_dict, images_dict = self.model.get_image_metrics_and_images(outputs, batch)
+        assert "image_idx" not in metrics_dict
+        metrics_dict["image_idx"] = image_idx
+        assert "num_rays" not in metrics_dict
+        metrics_dict["num_rays"] = len(camera_ray_bundle)
+        gc.collect()
         self.train()
         gc.collect()
         return metrics_dict, images_dict
@@ -332,46 +330,45 @@ class VanillaPipeline(Pipeline):
             metrics_dict: dictionary of metrics
         """
         self.eval()
-        with torch.no_grad():
-            metrics_dict_list = []
-            images_dict_list = []
-            num_images = len(self.datamanager.fixed_indices_eval_dataloader)
-            with Progress(
-                TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                TimeElapsedColumn(),
-                MofNCompleteColumn(),
-                transient=True,
-            ) as progress:
-                task = progress.add_task("[green]Evaluating all eval images...", total=num_images)
-                for camera_ray_bundle, batch in self.datamanager.fixed_indices_eval_dataloader:
-                    isbasicimages = False
-                    if isinstance(
-                        batch["image"], BasicImages
-                    ):  # If this is a generalized dataset, we need to get image tensor
-                        isbasicimages = True
-                        batch["image"] = batch["image"].images[0]
-                        camera_ray_bundle = camera_ray_bundle.reshape((*batch["image"].shape[:-1],))
-                    # time this the following line
-                    inner_start = time()
-                    height, width = camera_ray_bundle.shape
-                    num_rays = height * width
-                    outputs = self.model.get_outputs_for_camera_ray_bundle(camera_ray_bundle)
-                    metrics_dict, images_dict = self.model.get_image_metrics_and_images(outputs, batch)
-                    assert "num_rays_per_sec" not in metrics_dict
-                    metrics_dict["num_rays_per_sec"] = num_rays / (time() - inner_start)
-                    fps_str = "fps"
-                    assert fps_str not in metrics_dict
-                    metrics_dict[fps_str] = metrics_dict["num_rays_per_sec"] / (height * width)
-                    metrics_dict_list.append(metrics_dict)
-                    images_dict_list.append(images_dict)
-                    progress.advance(task)
-            # average the metrics list
-            metrics_dict = {}
-            for key in metrics_dict_list[0].keys():
-                metrics_dict[key] = float(
-                    torch.mean(torch.tensor([metrics_dict[key] for metrics_dict in metrics_dict_list]))
-                )
+        metrics_dict_list = []
+        images_dict_list = []
+        num_images = len(self.datamanager.fixed_indices_eval_dataloader)
+        with Progress(
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TimeElapsedColumn(),
+            MofNCompleteColumn(),
+            transient=True,
+        ) as progress:
+            task = progress.add_task("[green]Evaluating all eval images...", total=num_images)
+            for camera_ray_bundle, batch in self.datamanager.fixed_indices_eval_dataloader:
+                isbasicimages = False
+                if isinstance(
+                    batch["image"], BasicImages
+                ):  # If this is a generalized dataset, we need to get image tensor
+                    isbasicimages = True
+                    batch["image"] = batch["image"].images[0]
+                    camera_ray_bundle = camera_ray_bundle.reshape((*batch["image"].shape[:-1],))
+                # time this the following line
+                inner_start = time()
+                height, width = camera_ray_bundle.shape
+                num_rays = height * width
+                outputs = self.model.get_outputs_for_camera_ray_bundle(camera_ray_bundle)
+                metrics_dict, images_dict = self.model.get_image_metrics_and_images(outputs, batch)
+                assert "num_rays_per_sec" not in metrics_dict
+                metrics_dict["num_rays_per_sec"] = num_rays / (time() - inner_start)
+                fps_str = "fps"
+                assert fps_str not in metrics_dict
+                metrics_dict[fps_str] = metrics_dict["num_rays_per_sec"] / (height * width)
+                metrics_dict_list.append(metrics_dict)
+                images_dict_list.append(images_dict)
+                progress.advance(task)
+        # average the metrics list
+        metrics_dict = {}
+        for key in metrics_dict_list[0].keys():
+            metrics_dict[key] = float(
+                torch.mean(torch.tensor([metrics_dict[key] for metrics_dict in metrics_dict_list]))
+            )
         self.train()
         return metrics_dict, images_dict_list
 
@@ -388,45 +385,45 @@ class VanillaPipeline(Pipeline):
             metrics_dict: dictionary of metrics
         """
         self.eval()
-        with torch.no_grad():
-            coarse_mask = torch.ones(
-                (1, 1, coarse_grid_resolution, coarse_grid_resolution, coarse_grid_resolution), requires_grad=True
-            ).to(self.device)
-            coarse_mask.retain_grad()
 
-            num_images = len(self.datamanager.fixed_indices_train_dataloader)
-            with Progress(
-                TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                TimeElapsedColumn(),
-                MofNCompleteColumn(),
-                transient=True,
-            ) as progress:
-                task = progress.add_task("[green]Evaluating all eval images...", total=num_images)
-                for camera_ray_bundle, batch in self.datamanager.fixed_indices_train_dataloader:
-                    isbasicimages = False
-                    if isinstance(
-                        batch["image"], BasicImages
-                    ):  # If this is a generalized dataset, we need to get image tensor
-                        isbasicimages = True
-                        batch["image"] = batch["image"].images[0]
-                        camera_ray_bundle = camera_ray_bundle.reshape((*batch["image"].shape[:-1],))
-                    # downsample by factor of 4 to speed up
-                    camera_ray_bundle = camera_ray_bundle[::sub_sample_factor, ::sub_sample_factor]
-                    height, width = camera_ray_bundle.shape
-                    outputs = self.model.get_outputs_for_camera_ray_bundle(camera_ray_bundle)
-                    ray_points = outputs["ray_points"].reshape(height, width, -1, 3)
-                    weights = outputs["weights"]
+        coarse_mask = torch.ones(
+            (1, 1, coarse_grid_resolution, coarse_grid_resolution, coarse_grid_resolution), requires_grad=True
+        ).to(self.device)
+        coarse_mask.retain_grad()
 
-                    valid_points = ray_points.reshape(-1, 3)[weights.reshape(-1) > valid_points_thres]
-                    valid_points = valid_points * 0.5  # normalize from [-2, 2] to [-1, 1]
-                    # update mask based on ray samples
-                    with torch.enable_grad():
-                        out = torch.nn.functional.grid_sample(coarse_mask, valid_points[None, None, None])
-                        out.sum().backward()
-                    progress.advance(task)
+        num_images = len(self.datamanager.fixed_indices_train_dataloader)
+        with Progress(
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TimeElapsedColumn(),
+            MofNCompleteColumn(),
+            transient=True,
+        ) as progress:
+            task = progress.add_task("[green]Evaluating all eval images...", total=num_images)
+            for camera_ray_bundle, batch in self.datamanager.fixed_indices_train_dataloader:
+                isbasicimages = False
+                if isinstance(
+                    batch["image"], BasicImages
+                ):  # If this is a generalized dataset, we need to get image tensor
+                    isbasicimages = True
+                    batch["image"] = batch["image"].images[0]
+                    camera_ray_bundle = camera_ray_bundle.reshape((*batch["image"].shape[:-1],))
+                # downsample by factor of 4 to speed up
+                camera_ray_bundle = camera_ray_bundle[::sub_sample_factor, ::sub_sample_factor]
+                height, width = camera_ray_bundle.shape
+                outputs = self.model.get_outputs_for_camera_ray_bundle(camera_ray_bundle)
+                ray_points = outputs["ray_points"].reshape(height, width, -1, 3)
+                weights = outputs["weights"]
 
-            coarse_mask = (coarse_mask.grad > 0.0001).float()
+                valid_points = ray_points.reshape(-1, 3)[weights.reshape(-1) > valid_points_thres]
+                valid_points = valid_points * 0.5  # normalize from [-2, 2] to [-1, 1]
+                # update mask based on ray samples
+                with torch.enable_grad():
+                    out = torch.nn.functional.grid_sample(coarse_mask, valid_points[None, None, None])
+                    out.sum().backward()
+                progress.advance(task)
+
+        coarse_mask = (coarse_mask.grad > 0.0001).float()
 
         self.train()
         return coarse_mask
