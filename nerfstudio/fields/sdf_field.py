@@ -583,12 +583,12 @@ class SDFField(Field):
             h.append(n_dot_v)
 
         h = torch.cat(h, dim=-1)
-        torch.cuda.empty_cache()
+        # torch.cuda.empty_cache()
         for l in range(0, self.num_layers_color - 1):
             lin = getattr(self, "clin" + str(l))
-            gc.collect()
+            # gc.collect()
             h = lin(h)
-            gc.collect()
+            # gc.collect()
 
             if l < self.num_layers_color - 2:
                 h = self.relu(h)
