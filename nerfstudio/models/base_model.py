@@ -185,7 +185,6 @@ class Model(nn.Module):
         outputs = {}
         gc.collect()
         for output_name, outputs_list in outputs_lists.items():
-            gc.collect()
             if not torch.is_tensor(outputs_list[0]):
                 # TODO: handle lists of tensors as well
                 continue
