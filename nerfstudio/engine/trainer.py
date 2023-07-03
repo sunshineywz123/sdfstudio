@@ -176,6 +176,13 @@ class Trainer:
                 with torch.no_grad():
                     self.eval_iteration(step)
 
+                # 获取当前显存使用情况
+                allocated_memory = torch.cuda.memory_allocated() / 1024 / 1024
+                cached_memory = torch.cuda.memory_cached() / 1024 / 1024
+    
+                writer.put_scalar(name='Memory/Allocated', scalar=allocated_memory, step=step)
+                writer.put_scalar(name='Memory/Cached', scalar=cached_memory, step=step)
+                
                 #import ipdb;ipdb.set_trace()
                 if step_check(step, self.config.trainer.steps_per_save):
                     #import ipdb;ipdb.set_trace()
