@@ -306,7 +306,7 @@ class VanillaPipeline(Pipeline):
             step: current iteration step
         """
         self.eval()
-        torch.cuda.empty_cache()
+        # torch.cuda.empty_cache()
         gc.collect()
         image_idx, camera_ray_bundle, batch = self.datamanager.next_eval_image(step)
         gc.collect()
