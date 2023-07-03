@@ -173,8 +173,8 @@ class Trainer:
                     writer.put_scalar(name="Train Loss", scalar=loss, step=step)
                     writer.put_dict(name="Train Loss Dict", scalar_dict=loss_dict, step=step)
                     writer.put_dict(name="Train Metrics Dict", scalar_dict=metrics_dict, step=step)
-                with torch.no_grad():
-                    self.eval_iteration(step)
+                
+                self.eval_iteration(step)
 
                 # 获取当前显存使用情况
                 allocated_memory = torch.cuda.memory_allocated() / 1024 / 1024
