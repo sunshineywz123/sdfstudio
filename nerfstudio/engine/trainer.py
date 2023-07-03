@@ -173,8 +173,8 @@ class Trainer:
                     writer.put_scalar(name="Train Loss", scalar=loss, step=step)
                     writer.put_dict(name="Train Loss Dict", scalar_dict=loss_dict, step=step)
                     writer.put_dict(name="Train Metrics Dict", scalar_dict=metrics_dict, step=step)
-
-                self.eval_iteration(step)
+                with torch.no_grad():
+                    self.eval_iteration(step)
 
                 #import ipdb;ipdb.set_trace()
                 if step_check(step, self.config.trainer.steps_per_save):
