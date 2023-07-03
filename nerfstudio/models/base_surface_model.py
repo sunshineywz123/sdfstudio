@@ -278,9 +278,9 @@ class SurfaceModel(Model):
         return field_outputs
 
     def get_outputs(self, ray_bundle: RayBundle) -> Dict:
-        gc.collect()
+        # gc.collect()
         samples_and_field_outputs = self.sample_and_forward_field(ray_bundle=ray_bundle)
-        gc.collect()
+        # gc.collect()
 
         # Shotscuts
         field_outputs = samples_and_field_outputs["field_outputs"]
