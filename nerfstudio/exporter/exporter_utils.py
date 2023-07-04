@@ -131,7 +131,8 @@ def generate_point_cloud(
         while not progress_bar.finished:
             torch.cuda.empty_cache()
             with torch.no_grad():
-                ray_bundle, _ = pipeline.datamanager.next_train(0)
+                # ray_bundle, _ = pipeline.datamanager.next_train(0)
+                ray_bundle = pipeline.datamanager.next_train(0)[0]
                 outputs = pipeline.model(ray_bundle)
             if rgb_output_name not in outputs:
                 CONSOLE.rule("Error", style="red")
