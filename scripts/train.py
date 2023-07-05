@@ -50,7 +50,8 @@ from nerfstudio.configs.config_utils import convert_markup_to_ansi
 from nerfstudio.configs.method_configs import AnnotatedBaseConfigUnion
 from nerfstudio.engine.trainer import Trainer
 from nerfstudio.utils import comms, profiler
-
+import ipdb
+import sys
 CONSOLE = Console(width=120)
 DEFAULT_TIMEOUT = timedelta(minutes=30)
 
@@ -83,13 +84,12 @@ def train_loop(local_rank: int, world_size: int, config: cfg.Config, global_rank
         world_size: total number of gpus available
         config: config file specifying training regimen
     """
-    _set_random_seed(config.machine.seed + global_rank)
-    torch.cuda.set_device(local_rank)
-    trainer = Trainer(config, local_rank, world_size)
-    trainer.setup()
-    import ipdb
-    import sys
     try:
+        _set_random_seed(config.machine.seed + global_rank)
+        torch.cuda.set_device(local_rank)
+        trainer = Trainer(config, local_rank, world_size)
+        trainer.setup()
+
         trainer.train()
     except:
        type, value, traceback = sys.exc_info()
