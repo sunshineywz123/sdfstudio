@@ -104,7 +104,7 @@ class ExtractMesh:
                 simplify_mesh=self.simplify_mesh,
                 inv_contraction=inv_contract,
             )
-            import ipdb;ipdb.set_trace()
+            # import ipdb;ipdb.set_trace()
             
             texture_utils.export_textured_mesh(
                 mesh,
