@@ -109,14 +109,14 @@ class ExtractMesh:
             )
             # import ipdb;ipdb.set_trace()
             
-            texture_utils.export_textured_mesh(
-                mesh,
-                pipeline,
-                self.output_dir,
-                px_per_uv_triangle=self.px_per_uv_triangle if self.unwrap_method == "custom" else None,
-                unwrap_method=self.unwrap_method,
-                num_pixels_per_side=self.num_pixels_per_side,
-            )
+            # texture_utils.export_textured_mesh(
+            #     mesh,
+            #     pipeline,
+            #     self.output_dir,
+            #     px_per_uv_triangle=self.px_per_uv_triangle if self.unwrap_method == "custom" else None,
+            #     unwrap_method=self.unwrap_method,
+            #     num_pixels_per_side=self.num_pixels_per_side,
+            # )
             return
 
         if self.is_occupancy:
