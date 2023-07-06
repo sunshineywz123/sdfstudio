@@ -21,6 +21,8 @@ from nerfstudio.utils.marching_cubes import (
 )
 import ipdb
 import sys
+from nerfstudio.exporter.exporter_utils import (generate_point_cloud,get_mesh_from_filename)
+from nerfstudio.exporter import texture_utils, tsdf_utils
 CONSOLE = Console(width=120)
 
 # speedup for when input size to model doesn't change (much)
@@ -143,11 +145,9 @@ class ExtractMesh:
                 simplify_mesh=self.simplify_mesh,
             )
             if 0:
-                from nerfstudio.exporter.exporter_utils import (generate_point_cloud,get_mesh_from_filename)
-                from nerfstudio.exporter import texture_utils, tsdf_utils
                 mesh = get_mesh_from_filename(
-				str(self.output_path)
-	        )
+				    str(self.output_path)
+	            )
                 CONSOLE.print("Texturing mesh with NeRF")
                 ipdb.set_trace()
                 texture_utils.export_textured_mesh(
