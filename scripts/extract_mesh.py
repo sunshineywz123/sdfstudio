@@ -19,7 +19,8 @@ from nerfstudio.utils.marching_cubes import (
     get_surface_sliding,
     get_surface_sliding_with_contraction,
 )
-
+import ipdb
+import sys
 CONSOLE = Console(width=120)
 
 # speedup for when input size to model doesn't change (much)
@@ -148,7 +149,7 @@ class ExtractMesh:
 				str(self.output_path)
 	        )
                 CONSOLE.print("Texturing mesh with NeRF")
-                import ipdb;ipdb.set_trace()
+                ipdb.set_trace()
                 texture_utils.export_textured_mesh(
 				mesh,
 				pipeline,
@@ -157,14 +158,16 @@ class ExtractMesh:
      	        )
 
 def entrypoint():
-    """Entrypoint for use with pyproject scripts."""
-    tyro.extras.set_accent_color("bright_yellow")
-    tyro.cli(tyro.conf.FlagConversionOff[ExtractMesh]).main()
-
+    try:
+        """Entrypoint for use with pyproject scripts."""
+        tyro.extras.set_accent_color("bright_yellow")
+        tyro.cli(tyro.conf.FlagConversionOff[ExtractMesh]).main()
+    except:
+      type, value, traceback = sys.exc_info()
+      ipdb.post_mortem(traceback)
 
 if __name__ == "__main__":
-   import ipdb
-   import sys
+
    try:
        tyro.cli(tyro.conf.FlagConversionOff[ExtractMesh]).main()
    except:
