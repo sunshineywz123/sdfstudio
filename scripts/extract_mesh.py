@@ -163,7 +163,14 @@ def entrypoint():
 
 
 if __name__ == "__main__":
-    entrypoint()
+   import ipdb
+   import sys
+   try:
+       tyro.cli(tyro.conf.FlagConversionOff[ExtractMesh]).main()
+   except:
+      type, value, traceback = sys.exc_info()
+      ipdb.post_mortem(traceback)
+
 
 # For sphinx docs
 get_parser_fn = lambda: tyro.extras.get_parser(ExtractMesh)  # noqa
