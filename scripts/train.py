@@ -252,15 +252,21 @@ def main(config: cfg.Config) -> None:
 
 
 def entrypoint():
-    """Entrypoint for use with pyproject scripts."""
-    # Choose a base configuration and override values.
-    tyro.extras.set_accent_color("bright_yellow")
-    main(
-        tyro.cli(
-            AnnotatedBaseConfigUnion,
-            description=convert_markup_to_ansi(__doc__),
+    import ipdb
+    import sys
+    try:
+        """Entrypoint for use with pyproject scripts."""
+        # Choose a base configuration and override values.
+        tyro.extras.set_accent_color("bright_yellow")
+        main(
+            tyro.cli(
+                AnnotatedBaseConfigUnion,
+                description=convert_markup_to_ansi(__doc__),
+            )
         )
-    )
+    except:
+       type, value, traceback = sys.exc_info()
+       ipdb.post_mortem(traceback)
 
 
 if __name__ == "__main__":

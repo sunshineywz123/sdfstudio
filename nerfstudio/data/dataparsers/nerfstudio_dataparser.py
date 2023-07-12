@@ -50,6 +50,14 @@ class NerfstudioDataParserConfig(DataParserConfig):
     """Directory specifying location of data."""
     scale_factor: float = 1.0
     """How much to scale the camera origins by."""
+    include_mono_prior: bool = False
+    """whether or not to load monocular depth and normal """
+    include_sensor_depth: bool = False
+    """whether or not to load sensor depth"""
+    include_foreground_mask: bool = False
+    """whether or not to load foreground mask"""
+    include_sfm_points: bool = False
+    """whether or not to load sfm points"""
     downscale_factor: Optional[int] = None
     """How much to downscale images. If not set, images are chosen such that the max dimension is <1600px."""
     scene_scale: float = 1.0
@@ -64,7 +72,25 @@ class NerfstudioDataParserConfig(DataParserConfig):
     """The percent of images to use for training. The remaining images are for eval."""
     use_all_train_images: bool = False
     """Whether to use all images for training. If True, all images are used for training."""
+    train_with_masked_imgs: bool = False
+    """whether or not to mask out objects using foreground masks and train with masked images"""
+    sample_from_mask: bool = False
+    """if true, pixels are sampled only from masked regions"""
+    masked_img_dir: str = "masked_image"
+    """name of the folder where masked images are stored if train_with_masked_imgs is true"""
 
+def get_foreground_masks(image_idx: int, fg_masks):
+    """function to process additional foreground_masks
+
+    Args:
+        image_idx: specific image index to work with
+        fg_masks: foreground_masks
+    """
+
+    # sensor depth
+    fg_mask = fg_masks[image_idx]
+
+    return {"fg_mask": fg_mask}
 
 @dataclass
 class Nerfstudio(DataParser):
@@ -100,6 +126,7 @@ class Nerfstudio(DataParser):
         height = []
         width = []
         distort = []
+        foreground_mask_images = []
 
         for frame in meta["frames"]:
             filepath = PurePath(frame["file_path"])
@@ -144,6 +171,36 @@ class Nerfstudio(DataParser):
                 mask_filepath = PurePath(frame["mask_path"])
                 mask_fname = self._get_fname(mask_filepath, downsample_folder_prefix="masks_")
                 mask_filenames.append(mask_fname)
+            
+            if (
+                self.config.train_with_masked_imgs
+                or self.config.include_foreground_mask
+                or self.config.sample_from_mask
+            ):
+                assert meta["has_foreground_mask"]
+                frame["foreground_mask"] = frame["mask_path"]
+                mask_filename = self.config.data / frame["foreground_mask"]
+                mask = np.array(Image.open(mask_filename), dtype=np.float32) / 255.0
+                if len(mask.shape) == 3:
+                    mask = mask[..., 0]
+                if self.config.train_with_masked_imgs or self.config.sample_from_mask:
+                    masked_img_dir_path = self.config.data / self.config.masked_img_dir
+                    os.makedirs(str(masked_img_dir_path), exist_ok=True)
+
+            if self.config.train_with_masked_imgs:
+                image_filename = create_masked_img(image_filename, mask_filename, masked_img_dir_path)
+
+            if self.config.include_foreground_mask:
+                foreground_mask = mask[..., None]
+                foreground_mask_images.append(torch.from_numpy(foreground_mask).float())
+
+            if self.config.sample_from_mask:
+                # nerfstudio's pixel sampler requires single channel masks
+                mask_img = Image.fromarray((255.0 * mask).astype(np.uint8))
+                mask_filename = masked_img_dir_path / mask_filename.name
+                mask_img.save(mask_filename)
+                mask_filenames.append(mask_filename)
+
         if num_skipped_image_filenames >= 0:
             CONSOLE.log(f"Skipping {num_skipped_image_filenames} files in dataset split {split}.")
         assert (
@@ -262,11 +319,24 @@ class Nerfstudio(DataParser):
         if "applied_scale" in meta:
             applied_scale = float(meta["applied_scale"])
             scale_factor *= applied_scale
-        
+        if self.config.include_mono_prior:
+            additional_inputs_dict = {
+                "cues": {"func": get_depths_and_normals, "kwargs": {"depths": depth_images, "normals": normal_images}}
+            }
+        else:
+            additional_inputs_dict = {}
+        if self.config.include_foreground_mask:
+            additional_inputs_dict["foreground_masks"] = {
+            "func": get_foreground_masks,
+            "kwargs": {"fg_masks": foreground_mask_images},
+        }
+                       
         dataparser_outputs = DataparserOutputs(
             image_filenames=image_filenames,
             cameras=cameras,
+            # mask_filenames=mask_filenames if self.config.sample_from_mask else None,
             scene_box=scene_box,
+            additional_inputs=additional_inputs_dict,
             mask_filenames=mask_filenames if len(mask_filenames) > 0 else None,
             metadata={"transform": transform_matrix, "scale_factor": scale_factor},
         )
